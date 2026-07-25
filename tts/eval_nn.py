@@ -195,7 +195,7 @@ def _token_edit_distance(ref: list[int], target: list[int]) -> float:
     m, n = len(ref), len(target)
 
     if m == 0:
-        return float(n)
+        return 0.0 if n == 0 else 1.0
 
     dp = [[0] * (n + 1) for _ in range(m + 1)]
     for i in range(m + 1):
@@ -265,9 +265,8 @@ def main():
     )
     args = parser.parse_args()
 
-    ref_entries = [
-        json.loads(ln) for ln in open(args.ground_truth_jsonl, encoding="utf-8")
-    ]
+    with open(args.ground_truth_jsonl, encoding="utf-8") as f:
+        ref_entries = [json.loads(ln) for ln in f]
 
     ref_audio_paths = [Path(e["audios"][0]) for e in ref_entries]
     evaluator = EvalNN(ref_audio_paths, language=args.language)

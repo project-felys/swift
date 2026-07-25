@@ -16,7 +16,8 @@ BASELINE_MODEL_PATH = "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
 
 
 def prepare_eval_data(test_jsonl: str) -> list[dict[str, str]]:
-    lines = [json.loads(ln) for ln in open(test_jsonl, encoding="utf-8") if ln.strip()]
+    with open(test_jsonl, encoding="utf-8") as f:
+        lines = [json.loads(ln) for ln in f if ln.strip()]
 
     data: list[dict[str, str]] = []
     for entry in lines:

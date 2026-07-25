@@ -14,16 +14,14 @@ def _build_search_space(
         case "full":
             return {
                 "lr": optuna.distributions.FloatDistribution(5e-6, 5e-5, log=True),
-                "min_lr_factor": optuna.distributions.FloatDistribution(0.1, 1.0),
+                "min_lr_factor": optuna.distributions.FloatDistribution(0.2, 0.8),
                 "batch_size": optuna.distributions.CategoricalDistribution([4, 8, 16]),
-                "num_epochs": optuna.distributions.IntDistribution(2, 6),
             }
         case "lora":
             return {
                 "lr": optuna.distributions.FloatDistribution(5e-5, 5e-4, log=True),
-                "min_lr_factor": optuna.distributions.FloatDistribution(0.1, 1.0),
+                "min_lr_factor": optuna.distributions.FloatDistribution(0.2, 0.8),
                 "batch_size": optuna.distributions.CategoricalDistribution([4, 8, 16]),
-                "num_epochs": optuna.distributions.IntDistribution(2, 6),
                 "lora_rank": optuna.distributions.CategoricalDistribution([4, 8, 16]),
                 "lora_alpha": optuna.distributions.CategoricalDistribution([8, 16, 32]),
             }

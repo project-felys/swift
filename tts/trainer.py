@@ -24,10 +24,8 @@ def train_common(
     output_model_path: str,
     batch_size: int,
     gradient_accumulation_steps: int,
-    num_epochs: int,
     lr: float,
     min_lr_factor: float,
-    warmup_ratio: float,
     seed: int,
     *,
     prepare_model: Callable,
@@ -77,7 +75,7 @@ def train_common(
         per_device_eval_batch_size=batch_size,
         lr_scheduler_type="cosine_with_min_lr",
         lr_scheduler_kwargs={"min_lr": lr * min_lr_factor},
-        warmup_ratio=warmup_ratio,
+        warmup_ratio=0.05,
         optim="adamw_torch_fused",
         bf16=True,
         report_to=["tensorboard"],
@@ -86,7 +84,7 @@ def train_common(
         save_strategy="no",
         save_only_model=True,
         gradient_accumulation_steps=gradient_accumulation_steps,
-        num_train_epochs=num_epochs,
+        num_train_epochs=1,
         use_liger_kernel=True,
         dataloader_num_workers=4,
         seed=seed,
@@ -121,10 +119,8 @@ def train_full(
     output_model_path: str,
     batch_size: int,
     gradient_accumulation_steps: int,
-    num_epochs: int,
     lr: float,
     min_lr_factor: float,
-    warmup_ratio: float,
     seed: int,
 ) -> str | None:
     return train_common(
@@ -134,10 +130,8 @@ def train_full(
         output_model_path=output_model_path,
         batch_size=batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,
-        num_epochs=num_epochs,
         lr=lr,
         min_lr_factor=min_lr_factor,
-        warmup_ratio=warmup_ratio,
         seed=seed,
         prepare_model=prepare_full,
         finalize_model=lambda m: m,
@@ -151,10 +145,8 @@ def train_lora(
     output_model_path: str,
     batch_size: int,
     gradient_accumulation_steps: int,
-    num_epochs: int,
     lr: float,
     min_lr_factor: float,
-    warmup_ratio: float,
     lora_rank: int,
     lora_alpha: int,
     seed: int,
@@ -179,10 +171,8 @@ def train_lora(
         output_model_path=output_model_path,
         batch_size=batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,
-        num_epochs=num_epochs,
         lr=lr,
         min_lr_factor=min_lr_factor,
-        warmup_ratio=warmup_ratio,
         seed=seed,
         prepare_model=prepare_lora,
         finalize_model=lambda m: m.merge_and_unload(),
@@ -202,10 +192,8 @@ def main() -> None:
     )
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--gradient-accumulation-steps", type=int, default=2)
-    parser.add_argument("--num-epochs", type=int, default=4)
     parser.add_argument("--lr", type=float, default=2.29e-5)
     parser.add_argument("--min-lr-factor", type=float, default=0.434)
-    parser.add_argument("--warmup-ratio", type=float, default=0.05)
     parser.add_argument("--lora-rank", type=int, default=8)
     parser.add_argument("--lora-alpha", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
@@ -219,10 +207,8 @@ def main() -> None:
             output_model_path=args.output_model_path,
             batch_size=args.batch_size,
             gradient_accumulation_steps=args.gradient_accumulation_steps,
-            num_epochs=args.num_epochs,
             lr=args.lr,
             min_lr_factor=args.min_lr_factor,
-            warmup_ratio=args.warmup_ratio,
             lora_rank=args.lora_rank,
             lora_alpha=args.lora_alpha,
             seed=args.seed,
@@ -235,10 +221,8 @@ def main() -> None:
             output_model_path=args.output_model_path,
             batch_size=args.batch_size,
             gradient_accumulation_steps=args.gradient_accumulation_steps,
-            num_epochs=args.num_epochs,
             lr=args.lr,
             min_lr_factor=args.min_lr_factor,
-            warmup_ratio=args.warmup_ratio,
             seed=args.seed,
         )
     else:

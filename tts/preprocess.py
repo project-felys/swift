@@ -69,9 +69,11 @@ def enhance_audio(audio: np.ndarray, cv) -> np.ndarray:
     return np.asarray(out, dtype=np.float32)
 
 
-def make_token_counter(path: Path) -> Callable[[str], int]:
+def make_token_counter() -> Callable[[str], int]:
     tokenizer = AutoTokenizer.from_pretrained(
-        str(path), trust_remote_code=True, local_files_only=True
+        Path(__file__).parent / "tokenizer",
+        trust_remote_code=True,
+        local_files_only=True,
     )
     return lambda text: len(tokenizer.encode(text))
 
@@ -219,7 +221,6 @@ class EnhanceStage:
         source_wav_dir: Path,
         out_dir: Path,
         stem: str,
-        tokenizer_path: Path,
         min_seconds: float = DEFAULT_MIN_SECONDS,
         min_tokens: int = DEFAULT_MIN_TOKENS,
         force: bool = False,
@@ -232,7 +233,7 @@ class EnhanceStage:
         self._out_dir = out_dir
         self._stem = stem
         self._cv = ClearVoice(task="speech_enhancement", model_names=[CLEARVOICE_MODEL])
-        self._token_counter = make_token_counter(tokenizer_path)
+        self._token_counter = make_token_counter()
         self._min_seconds = min_seconds
         self._min_tokens = min_tokens
         self._force = force
@@ -534,12 +535,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--min-seconds", type=float, default=DEFAULT_MIN_SECONDS)
     parser.add_argument("--min-tokens", type=int, default=DEFAULT_MIN_TOKENS)
     parser.add_argument(
-        "--tokenizer-path",
-        type=Path,
-        required=True,
-        help="HF tokenizer dir for min-token filtering.",
-    )
-    parser.add_argument(
         "--max-per-audio",
         type=int,
         default=DEFAULT_MAX_PER_AUDIO,
@@ -584,7 +579,6 @@ def main() -> None:
         source_wav_dir=args.wav_dir,
         out_dir=args.output_dir / "enhanced",
         stem=args.stem,
-        tokenizer_path=args.tokenizer_path,
         min_seconds=args.min_seconds,
         min_tokens=args.min_tokens,
         force=args.force,
