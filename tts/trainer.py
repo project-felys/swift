@@ -73,6 +73,7 @@ def train_common(
         learning_rate=lr,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
+        train_dataloader_shuffle=False,
         lr_scheduler_type="cosine_with_min_lr",
         lr_scheduler_kwargs={"min_lr": lr * min_lr_factor},
         warmup_ratio=0.05,
@@ -85,7 +86,6 @@ def train_common(
         save_only_model=True,
         gradient_accumulation_steps=gradient_accumulation_steps,
         num_train_epochs=1,
-        use_liger_kernel=True,
         dataloader_num_workers=4,
         seed=seed,
         data_seed=seed,
@@ -190,12 +190,12 @@ def main() -> None:
     parser.add_argument(
         "--output-model-path", default="/root/autodl-tmp/output/tts/test"
     )
-    parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--gradient-accumulation-steps", type=int, default=2)
-    parser.add_argument("--lr", type=float, default=2.29e-5)
-    parser.add_argument("--min-lr-factor", type=float, default=0.434)
+    parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--gradient-accumulation-steps", type=int, default=1)
+    parser.add_argument("--lr", type=float, default=1e-5)
+    parser.add_argument("--min-lr-factor", type=float, default=0.5)
     parser.add_argument("--lora-rank", type=int, default=8)
-    parser.add_argument("--lora-alpha", type=int, default=32)
+    parser.add_argument("--lora-alpha", type=int, default=8)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
