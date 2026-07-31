@@ -13,7 +13,7 @@ def _build_search_space(
     match tuner_type:
         case "full":
             return {
-                "lr": optuna.distributions.FloatDistribution(5e-6, 5e-5, log=True),
+                "lr": optuna.distributions.FloatDistribution(1e-6, 5e-5, log=True),
                 "min_lr_factor": optuna.distributions.FloatDistribution(0.2, 0.8),
                 "batch_size": optuna.distributions.CategoricalDistribution([4, 8, 16]),
             }
@@ -32,7 +32,7 @@ def _build_search_space(
 def build_study(results_path: Path, tuner_type: str) -> optuna.Study:
     search_space = _build_search_space(tuner_type)
     study = optuna.create_study(
-        directions=["minimize", "maximize", "minimize"],
+        directions=["minimize", "maximize"],
         study_name="qwen3-tts-mobo",
     )
 
@@ -42,7 +42,8 @@ def build_study(results_path: Path, tuner_type: str) -> optuna.Study:
 
     for r in records:
         params = {key: r[key] for key in search_space}
-        values = (r["wer"], r["cosine_sim"], r["utmos_mse"])
+        similarity = r.get("wavlm_cosine", r["cosine_sim"])
+        values = (r["wer"], similarity)
         study.add_trial(
             optuna.trial.create_trial(
                 params=params,
@@ -73,13 +74,12 @@ def main() -> None:
     pareto_path = results_path.parent / "pareto_front.jsonl"
     with open(pareto_path, "w", encoding="utf-8") as pf:
         for t in pareto_front:
-            wer, cos_sim, utmos_mse = t.values
+            wer, similarity = t.values
             line = json.dumps(
                 {
                     "trial": t.number,
                     "wer": wer,
-                    "cosine_sim": cos_sim,
-                    "utmos_mse": utmos_mse,
+                    "wavlm_cosine": similarity,
                     "params": t.params,
                 },
                 ensure_ascii=False,

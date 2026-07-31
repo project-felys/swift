@@ -41,7 +41,6 @@ def compute_metadata(
     df = pd.DataFrame(
         data=(
             (
-                entry["hash"],
                 entry["name"],
                 entry["text"],
                 wav_duration(wav_dir / f"{entry['name']}.wav"),
@@ -49,9 +48,8 @@ def compute_metadata(
             )
             for entry in tqdm.tqdm(corpus_records, desc="metadata")
         ),
-        columns=["hash", "name", "text", "duration", "num_tokens"],
+        columns=["name", "text", "duration", "num_tokens"],
     )
-    df = df.set_index("hash")
     df.values.flags.writeable = False
     return df
 
@@ -136,6 +134,20 @@ def tokenizer_12hz_audio_codes(
     return {name: codes_by_path[path] for name, path in name_to_path.items()}
 
 
+def build_ordered_names(
+    names: Sequence[str],
+    num_epochs: int,
+    seed: int,
+) -> list[str]:
+    ordered: list[str] = []
+    for epoch in range(num_epochs):
+        epoch_rng = random.Random(seed + epoch)
+        epoch_names = list(names)
+        epoch_rng.shuffle(epoch_names)
+        ordered.extend(epoch_names)
+    return ordered
+
+
 def emit_for_swift_format(
     names: Sequence[str],
     metadata: pd.DataFrame,
@@ -165,9 +177,11 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=Path("audio"))
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--tokenizer-batch-size", type=int, default=8)
-    parser.add_argument("--min-tokens", type=int, default=2)
-    parser.add_argument("--min-seconds", type=float, default=0.5)
-    parser.add_argument("--num-epochs", type=int, default=3)
+    parser.add_argument("--min-tokens", type=int, default=4)
+    parser.add_argument("--min-seconds", type=float, default=2)
+    parser.add_argument("--num-epochs", type=int, default=2)
+    parser.add_argument("--num-splits", type=int, default=3)
+    parser.add_argument("--test-ratio", type=float, default=0.1)
     args = parser.parse_args()
 
     stem = args.dataset.name
@@ -188,12 +202,7 @@ def main() -> None:
     name_to_codes = tokenizer_12hz_audio_codes(name_to_path, args.tokenizer_batch_size)
 
     names = list(name_to_path.keys())
-    ordered_names: list[str] = []
-    for epoch in range(args.num_epochs):
-        epoch_rng = random.Random(args.seed + epoch)
-        epoch_names = list(names)
-        epoch_rng.shuffle(epoch_names)
-        ordered_names.extend(epoch_names)
+    ordered_names = build_ordered_names(names, args.num_epochs, args.seed)
 
     emit_for_swift_format(
         ordered_names,
@@ -203,6 +212,37 @@ def main() -> None:
         output_ref_wav_path,
         output_jsonl_path,
     )
+
+    train_dir = args.output_dir / "train"
+    test_dir = args.output_dir / "test"
+    num_test = max(1, int(len(names) * args.test_ratio))
+
+    for split in range(args.num_splits):
+        split_rng = random.Random(args.seed + split)
+        split_names = list(names)
+        split_rng.shuffle(split_names)
+        test_names = split_names[:num_test]
+        train_names = split_names[num_test:]
+
+        train_ordered = build_ordered_names(
+            train_names, args.num_epochs, args.seed
+        )
+        emit_for_swift_format(
+            train_ordered,
+            metadata,
+            name_to_codes,
+            output_wav_dir,
+            output_ref_wav_path,
+            train_dir / f"{split}.jsonl",
+        )
+        emit_for_swift_format(
+            test_names,
+            metadata,
+            name_to_codes,
+            output_wav_dir,
+            output_ref_wav_path,
+            test_dir / f"{split}.jsonl",
+        )
 
 
 if __name__ == "__main__":

@@ -6,11 +6,14 @@ from typing import Any
 
 import optuna
 import torch
-from optuna.trial import TrialState
-
 from eval_nn import EvalNN, evaluate_model
 from gen_audio import generate_all, prepare_eval_data
+from optuna.trial import TrialState
 from trainer import train_full, train_lora
+
+
+def _similarity_value(record: dict[str, Any]) -> float:
+    return record.get("wavlm_cosine", record["cosine_sim"])
 
 
 def _build_search_space(
@@ -19,7 +22,7 @@ def _build_search_space(
     match tuner_type:
         case "full":
             return {
-                "lr": optuna.distributions.FloatDistribution(5e-6, 5e-5, log=True),
+                "lr": optuna.distributions.FloatDistribution(1e-6, 5e-5, log=True),
                 "min_lr_factor": optuna.distributions.FloatDistribution(0.2, 0.8),
                 "batch_size": optuna.distributions.CategoricalDistribution([4, 8, 16]),
             }
@@ -39,7 +42,7 @@ def _sample_params(trial: optuna.Trial, tuner_type: str) -> dict[str, Any]:
     match tuner_type:
         case "full":
             return {
-                "lr": trial.suggest_float("lr", 5e-6, 5e-5, log=True),
+                "lr": trial.suggest_float("lr", 1e-6, 5e-5, log=True),
                 "min_lr_factor": trial.suggest_float("min_lr_factor", 0.2, 0.8),
                 "batch_size": trial.suggest_categorical("batch_size", [4, 8, 16]),
             }
@@ -62,6 +65,7 @@ def _run_trial_training(
     speaker_name: str,
     init_model_path: str,
     output_model_path: str,
+    num_epochs: int,
     seed: int,
 ) -> str:
     match tuner_type:
@@ -73,6 +77,7 @@ def _run_trial_training(
                 output_model_path=output_model_path,
                 batch_size=params["batch_size"] // 2,
                 gradient_accumulation_steps=2,
+                num_epochs=num_epochs,
                 lr=params["lr"],
                 min_lr_factor=params["min_lr_factor"],
                 seed=seed,
@@ -85,6 +90,7 @@ def _run_trial_training(
                 output_model_path=output_model_path,
                 batch_size=params["batch_size"],
                 gradient_accumulation_steps=1,
+                num_epochs=num_epochs,
                 lr=params["lr"],
                 min_lr_factor=params["min_lr_factor"],
                 lora_rank=params["lora_rank"],
@@ -103,7 +109,7 @@ def _create_study(
 ) -> tuple[optuna.Study, int]:
     sampler = optuna.samplers.TPESampler(seed=seed, n_startup_trials=20)
     study = optuna.create_study(
-        directions=["minimize", "maximize", "minimize"],
+        directions=["minimize", "maximize"],
         sampler=sampler,
         study_name="qwen3-tts-mobo",
     )
@@ -116,7 +122,7 @@ def _create_study(
 
         for record in all_records:
             params = {key: record[key] for key in search_space}
-            values = (record["wer"], record["cosine_sim"], record["utmos_mse"])
+            values = (record["wer"], _similarity_value(record))
             frozen_trial = optuna.trial.create_trial(
                 params=params,
                 distributions=search_space,
@@ -146,13 +152,12 @@ def _save_pareto_front(study: optuna.Study, results_path: Path) -> None:
     pareto_path = results_path.parent / "pareto_front.jsonl"
     with open(pareto_path, "w", encoding="utf-8") as pf:
         for t in pareto_front:
-            wer, cos_sim, utmos_mse = t.values
+            wer, similarity = t.values
             line = json.dumps(
                 {
                     "trial": t.number,
                     "wer": wer,
-                    "cosine_sim": cos_sim,
-                    "utmos_mse": utmos_mse,
+                    "wavlm_cosine": similarity,
                     "params": t.params,
                 },
                 ensure_ascii=False,
@@ -188,6 +193,7 @@ def bo_loop(args: argparse.Namespace) -> None:
                 speaker_name=args.speaker_name,
                 init_model_path=args.init_model_path,
                 output_model_path=trial_output_path,
+                num_epochs=args.num_epochs,
                 seed=args.seed,
             )
 
@@ -203,7 +209,6 @@ def bo_loop(args: argparse.Namespace) -> None:
             values = (
                 metrics_mean["wer"],
                 metrics_mean["cosine_sim"],
-                metrics_mean["utmos_mse"],
             )
 
             study.tell(trial, values)
@@ -240,7 +245,8 @@ def main() -> None:
         "--init-model-path", type=str, default="Qwen/Qwen3-TTS-12Hz-0.6B-Base"
     )
     parser.add_argument("--output-model-path", type=str, default="output")
-    parser.add_argument("--n-trials", type=int, default=40)
+    parser.add_argument("--n-trials", type=int, default=50)
+    parser.add_argument("--num-epochs", type=int, default=1)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 

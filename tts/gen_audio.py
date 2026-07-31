@@ -12,7 +12,7 @@ from qwen_tts.inference.qwen3_tts_model import Qwen3TTSModel
 
 TARGET_SR = 24000
 
-BASELINE_MODEL_PATH = "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+BASELINE_MODEL_PATH = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
 
 
 def prepare_eval_data(test_jsonl: str) -> list[dict[str, str]]:

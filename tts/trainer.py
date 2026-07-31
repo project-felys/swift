@@ -24,6 +24,7 @@ def train_common(
     output_model_path: str,
     batch_size: int,
     gradient_accumulation_steps: int,
+    num_epochs: int,
     lr: float,
     min_lr_factor: float,
     seed: int,
@@ -85,7 +86,7 @@ def train_common(
         save_strategy="no",
         save_only_model=True,
         gradient_accumulation_steps=gradient_accumulation_steps,
-        num_train_epochs=1,
+        num_train_epochs=num_epochs,
         dataloader_num_workers=4,
         seed=seed,
         data_seed=seed,
@@ -119,6 +120,7 @@ def train_full(
     output_model_path: str,
     batch_size: int,
     gradient_accumulation_steps: int,
+    num_epochs: int,
     lr: float,
     min_lr_factor: float,
     seed: int,
@@ -130,6 +132,7 @@ def train_full(
         output_model_path=output_model_path,
         batch_size=batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,
+        num_epochs=num_epochs,
         lr=lr,
         min_lr_factor=min_lr_factor,
         seed=seed,
@@ -145,6 +148,7 @@ def train_lora(
     output_model_path: str,
     batch_size: int,
     gradient_accumulation_steps: int,
+    num_epochs: int,
     lr: float,
     min_lr_factor: float,
     lora_rank: int,
@@ -171,6 +175,7 @@ def train_lora(
         output_model_path=output_model_path,
         batch_size=batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,
+        num_epochs=num_epochs,
         lr=lr,
         min_lr_factor=min_lr_factor,
         seed=seed,
@@ -192,8 +197,9 @@ def main() -> None:
     )
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--gradient-accumulation-steps", type=int, default=1)
-    parser.add_argument("--lr", type=float, default=1e-5)
-    parser.add_argument("--min-lr-factor", type=float, default=0.5)
+    parser.add_argument("--num-epochs", type=int, default=1)
+    parser.add_argument("--lr", type=float, default=5e-6)
+    parser.add_argument("--min-lr-factor", type=float, default=0.4)
     parser.add_argument("--lora-rank", type=int, default=8)
     parser.add_argument("--lora-alpha", type=int, default=8)
     parser.add_argument("--seed", type=int, default=42)
@@ -207,6 +213,7 @@ def main() -> None:
             output_model_path=args.output_model_path,
             batch_size=args.batch_size,
             gradient_accumulation_steps=args.gradient_accumulation_steps,
+            num_epochs=args.num_epochs,
             lr=args.lr,
             min_lr_factor=args.min_lr_factor,
             lora_rank=args.lora_rank,
@@ -221,6 +228,7 @@ def main() -> None:
             output_model_path=args.output_model_path,
             batch_size=args.batch_size,
             gradient_accumulation_steps=args.gradient_accumulation_steps,
+            num_epochs=args.num_epochs,
             lr=args.lr,
             min_lr_factor=args.min_lr_factor,
             seed=args.seed,

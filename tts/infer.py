@@ -26,7 +26,9 @@ def main():
     )
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--text", type=str, default=test_text)
+    parser.add_argument("--language", type=str, default="Chinese")
     parser.add_argument("--speaker", type=str, default="cyrene")
+    parser.add_argument("--instruct", type=str, default="")
     parser.add_argument("--output", type=str, default="output.wav")
     parser.add_argument(
         "--max-new-tokens",
@@ -45,7 +47,9 @@ def main():
 
     wavs, sr = tts.generate_custom_voice(
         text=args.text,
+        language=args.language,
         speaker=args.speaker,
+        instruct=args.instruct,
         max_new_tokens=args.max_new_tokens,
     )
 
